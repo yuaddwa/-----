@@ -1,0 +1,42 @@
+# Ignore build outputs
+build/
+*.bin
+*.elf
+*.map
+*.o
+*.obj
+
+# IDE
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+
+# ESP-IDF
+sdkconfig
+sdkconfig.old
+managed_components/
+dependencies.lock.d/
+
+# Local tool state
+.cache/
+.eslintcache
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# CI artifacts (CI uploads its own)
+artifacts/
+
+# OS
+*~
+
+# Logs
+*.log
+# WorkBuddy workspace state
+.workbuddy/
+

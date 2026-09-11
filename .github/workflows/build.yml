@@ -1,0 +1,103 @@
+name: Build ESP32-C3 Firmware
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  IDF_VERSION: v5.5.3
+
+jobs:
+  build:
+    name: Build folotoy_uno_duel
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install ESP-IDF toolchain
+        uses: espressif/esp-idf-ci-action@v1
+        with:
+          esp_idf_version: ${{ env.IDF_VERSION }}
+          target: esp32c3
+          idf_py_target: esp32c3
+
+      - name: Show environment
+        run: |
+          idf.py --version
+          python --version
+          cmake --version
+
+      - name: Configure project
+        run: |
+          idf.py set-target esp32c3
+          idf.py reconfigure
+
+      - name: Build firmware
+        run: |
+          idf.py build
+        env:
+          IDF_COMPONENT_NOTICE: "true"
+
+      - name: Collect build artifacts
+        if: success()
+        run: |
+          mkdir -p artifacts
+          cp build/bootloader/bootloader.bin     artifacts/bootloader.bin
+          cp build/partition_table/partition-table.bin artifacts/partition-table.bin
+          cp build/folotoy_uno_duel.bin          artifacts/folotoy_uno_duel.bin
+          cp build/merged.bin                    artifacts/merged.bin
+          cp build/flash_args                    artifacts/flash_args 2>/dev/null || true
+          cp build/size.json                     artifacts/size.json 2>/dev/null || true
+          ls -lh artifacts/
+
+      - name: Compute firmware checksums
+        if: success()
+        run: |
+          cd artifacts
+          sha256sum *.bin > SHA256SUMS
+          cat SHA256SUMS
+
+      - name: Upload firmware artifacts
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: uno-firmware
+          path: artifacts/
+          if-no-files-found: error
+          retention-days: 14
+
+  release:
+    name: Create GitHub Release
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: uno-firmware
+          path: artifacts/
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            artifacts/bootloader.bin
+            artifacts/partition-table.bin
+            artifacts/folotoy_uno_duel.bin
+            artifacts/merged.bin
+            artifacts/SHA256SUMS
+          generate_release_notes: true
+          draft: false
+          prerelease: false
