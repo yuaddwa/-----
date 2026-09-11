@@ -28,7 +28,7 @@ jobs:
         with:
           esp_idf_version: ${{ env.IDF_VERSION }}
           target: esp32c3
-          idf_py_target: esp32c3
+          command: idf.py --version
 
       - name: Show environment
         run: |
